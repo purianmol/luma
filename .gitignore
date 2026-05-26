@@ -1,0 +1,33 @@
+# Binaries
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+bin/
+
+# Go build outputs
+*.test
+*.out
+/dist/
+
+# Environment variables
+.env
+!.env.example
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+
+# Docker volumes (local dev data)
+postgres_data/
+redis_data/
+
+# File uploads (local dev)
+/tmp/collab-files/
+
+# Go module download cache
+vendor/
