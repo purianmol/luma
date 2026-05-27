@@ -1,5 +1,11 @@
 package config
 
+import (
+	"fmt"
+	"os"
+	"strconv"
+)
+
 type AppEnv string
 
 const (
@@ -73,4 +79,64 @@ type Config struct {
 	// In production this would be replaced by an S3 bucket name, but the
 	// local filesystem works fine for development and integration tests.
 	StorageRoot string
+}
+
+func Load() (*Config, error) {
+	cfg := &Config{
+		AppEnv:   AppEnv(getEnv("APP_ENV", string(EnvDevelopment))),
+		Port:     getEnv("PORT", "8080"),
+		LogLevel: getEnv("LOG_LEVEL", "info"),
+
+		DBHost:     getEnv("POSTGRES_HOST", "localhost"),
+		DBPort:     getEnv("POSTGRES_PORT", "5432"),
+		DBUser:     getEnv("POSTGRES_USER", "collab"),
+		DBPassword: getEnv("POSTGRES_PASSWORD", "secret"),
+		DBName:     getEnv("POSTGRES_DB", "collabdb"),
+
+		RedisHost:     getEnv("REDIS_HOST", "localhost"),
+		RedisPort:     getEnv("REDIS_PORT", "6379"),
+		RedisPassword: getEnv("REDIS_PASSWORD", ""),
+
+		JWTSecret:              getEnv("JWT_SECRET", ""),
+		JWTExpiryHours:         getEnvInt("JWT_EXPIRY_HOURS", 24),
+		RefreshTokenExpiryDays: getEnvInt("REFRESH_TOKEN_EXPIRY_DAYS", 30),
+
+		AuthServiceURL: getEnv("AUTH_SERVICE_URL", "http://localhost:8081"),
+		ChatServiceURL: getEnv("CHAT_SERVICE_URL", "http://localhost:8082"),
+		FileServiceURL: getEnv("FILE_SERVICE_URL", "http://localhost:8083"),
+
+		RateLimitRPS: getEnvInt("RATE_LIMIT_RPS", 100),
+		StorageRoot:  getEnv("STORAGE_ROOT", "/tmp/collab-files"),
+	}
+	cfg.DBDSN = fmt.Sprintf(
+		"host=%s user=%s password=%s dbname=%s port=%s sslmode=disable TimeZone=UTC",
+		cfg.DBHost, cfg.DBUser, cfg.DBPassword, cfg.DBName, cfg.DBPort,
+	)
+	cfg.RedisAddr = fmt.Sprintf("%s:%s", cfg.RedisHost, cfg.RedisPort)
+
+	if err := cfg.validate(); err != nil {
+		return nil, fmt.Errorf("config validation failed: %w", err)
+	}
+
+	return cfg, nil
+
+}
+
+func getEnv(key, fallback string) string {
+	if v, ok := os.LookupEnv(key); ok && v != "" {
+		return v
+	}
+	return fallback
+}
+
+func getEnvInt(key string, fallback int) int {
+	v, ok := os.LookupEnv(key)
+	if !ok || v == "" {
+		return fallback
+	}
+	n, err := strconv.Atoi(v)
+	if err != nil {
+		panic(fmt.Sprintf("config: %s must be an integer, got %q: %v", key, v, err))
+	}
+	return n
 }
