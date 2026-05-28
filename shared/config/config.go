@@ -129,6 +129,29 @@ func getEnv(key, fallback string) string {
 	return fallback
 }
 
+func (c *Config) validate() error {
+	if c.JWTSecret == "" {
+		return fmt.Errorf("JWT_SECRET cannot be empty")
+	}
+
+	if c.IsProduction() && len(c.JWTSecret) < 32 {
+		return fmt.Errorf("JWT_SECRET must be at least 32 characters in production (got %d)", len(c.JWTSecret))
+	}
+
+	if c.JWTExpiryHours <= 0 {
+		return fmt.Errorf("JWT_EXPIRY_HOURS must be a non zero positive integer, got %d", c.JWTExpiryHours)
+	}
+
+	if c.RefreshTokenExpiryDays <= 0 {
+		return fmt.Errorf("REFRESH_TOKEN_EXPIRY_DAYS must be a non positive integer, got %d", c.RefreshTokenExpiryDays)
+	}
+	return nil
+}
+
+func (c *Config) IsProduction() bool {
+	return c.AppEnv == EnvDevelopment
+}
+
 func getEnvInt(key string, fallback int) int {
 	v, ok := os.LookupEnv(key)
 	if !ok || v == "" {
